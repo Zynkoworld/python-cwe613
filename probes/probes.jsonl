@@ -19,3 +19,4 @@
 {"code": "import jwt as j\nt = j.encode({'sub': u, 'iat': now}, key)\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
 {"code": "def encode(payload, key):\n    return b''\nt = encode({'sub': u}, key)\n", "line": 3, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
 {"code": "class Codec:\n    def encode(self, d):\n        return d\nc = Codec()\nc.encode({'sub': u})\n", "line": 5, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
+{"code": "import jwt\nm = 'encode'\nt = getattr(jwt, m)({'sub': u}, key)\n", "line": 3, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19249: getattr constant-bound name)"}
