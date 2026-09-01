@@ -1,0 +1,17 @@
+{"code": "import jwt\nt = jwt.encode({'sub': uid}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode({'sub': uid, 'iat': now}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode({'user': u, 'role': 'admin'}, SECRET, algorithm='HS512')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode({}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode(payload={'sub': uid, 'iss': 'zynko'}, key=key, algorithm='HS256')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt, time\nt = jwt.encode({'sub': uid, 'exp': time.time() + 3600}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode({'sub': uid, 'exp': exp_at, 'iat': now}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode(payload, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.encode(build_payload(uid), key, algorithm='HS256')\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "t = 'abc'.encode('utf-8')\n", "line": 1, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "import json\nb = json.dumps({'sub': uid}).encode()\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python"}
+{"code": "import jwt\nt = jwt.decode(tok, key, algorithms=['HS256'])\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "payload = {'sub': u}\n", "line": 1, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "import jwt\nt = jwt.encode({'sub': u, **extra}, key)\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "import jwt\nt = jwt.encode({'sub': u, 'expires_at': ts}, key)\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "import base64\nt = base64.b64encode(data)\n", "line": 1, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "import jwt\ntok = jwt.encode({'aud': 'api', 'sub': u}, SECRET)\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
