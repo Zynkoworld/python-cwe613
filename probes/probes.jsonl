@@ -15,3 +15,7 @@
 {"code": "import jwt\nt = jwt.encode({'sub': u, 'expires_at': ts}, key)\n", "line": 2, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
 {"code": "import base64\nt = base64.b64encode(data)\n", "line": 1, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
 {"code": "import jwt\ntok = jwt.encode({'aud': 'api', 'sub': u}, SECRET)\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "held-out adversarial (near-miss / boundary)"}
+{"code": "from jwt import encode\nt = encode({'sub': u}, key, algorithm='HS256')\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
+{"code": "import jwt as j\nt = j.encode({'sub': u, 'iat': now}, key)\n", "line": 2, "expected_verdict": "FLAG", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
+{"code": "def encode(payload, key):\n    return b''\nt = encode({'sub': u}, key)\n", "line": 3, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}
+{"code": "class Codec:\n    def encode(self, d):\n        return d\nc = Codec()\nc.encode({'sub': u})\n", "line": 5, "expected_verdict": "SAFE", "cwe": "CWE-613", "lang": "python", "origin": "adversarial (zafire #19219 review: binding vs name)"}

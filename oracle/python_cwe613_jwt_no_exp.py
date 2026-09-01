@@ -1,30 +1,96 @@
-"""python-cwe613 -- JWT encoded from a LITERAL payload that carries no expiration claim.
+"""python-cwe613 -- JWT encoded from a literal payload with no expiration claim, decided on the BINDING.
 
-decide(code, line) -> "FLAG" | "SAFE".  FLAG iff the line contains a `jwt.encode(...)` (or `.encode(...)`
-on a jwt-like object) whose payload argument is a DICT LITERAL that has no `exp` key. If the payload is
-a name, a call, or anything else the decider cannot see into, the verdict is SAFE -- no guessing.
+decide(code, line) -> "FLAG" | "SAFE".  FLAG iff the line contains a call that resolves, through the
+module's import bindings, to `jwt.encode` AND its payload argument is a DICT LITERAL carrying no
+expiration key. Binding-based, so `from jwt import encode` and `import jwt as j; j.encode(...)` both
+resolve, while `"abc".encode()` and `json.dumps(x).encode()` do not.
 
-Scope: this decides the presence of the `exp` claim in a literal payload. It does not evaluate whether a
-present `exp` is a SENSIBLE lifetime, and it says nothing about server-side session stores.
+If the payload is a name, a call, or anything else the decider cannot see into, the verdict is SAFE --
+no guessing. This decides the PRESENCE of the `exp` claim; it does not judge whether a present `exp`
+is a sensible lifetime, and it says nothing about server-side session stores.
 stdlib `ast` only; no code is executed.
 """
 import ast
 
 CWE = "CWE-613"
-
 _EXPIRY_KEYS = {"exp", "expires", "expiry", "expires_at", "expiration"}
+_ENCODE = {"jwt.encode", "jwt.api_jwt.encode", "jwt.PyJWT.encode"}
+# --- import-kotes feloldas (zafire #19219: a dontes a KOTESRE alljon, ne a nevre) ---
+
+def _dotted(node):
+    """a.b.c -> "a.b.c"; barmi mas -> None"""
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return None
 
 
-def _is_jwt_encode(node):
-    f = node.func
-    if not isinstance(f, ast.Attribute) or f.attr != "encode":
-        return False
-    base = f.value
-    if isinstance(base, ast.Name):
-        return "jwt" in base.id.lower()
-    if isinstance(base, ast.Attribute):
-        return "jwt" in base.attr.lower()
-    return False
+def _resolve(dotted, binds):
+    head, _, rest = dotted.partition(".")
+    if head in binds:
+        return binds[head] + ("." + rest if rest else "")
+    return dotted
+
+
+def _bindings(tree):
+    """lokalis nev -> teljes (pontozott) eredet: importok + egyszeru referencia-atadas."""
+    binds = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            for a in n.names:
+                binds[a.asname or a.name.split(".")[0]] = a.name if a.asname else a.name.split(".")[0]
+        elif isinstance(n, ast.ImportFrom):
+            mod = n.module or ""
+            for a in n.names:
+                binds[a.asname or a.name] = (mod + "." + a.name) if mod else a.name
+    for n in ast.walk(tree):          # f = hashlib.md5  ->  f kotese hashlib.md5
+        if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
+            d = _dotted(n.value)
+            if d:
+                binds[n.targets[0].id] = _resolve(d, binds)
+    return binds
+
+
+def _local_defs(tree):
+    """a modul altal MAGA definialt nevek -- ezek arnyekoljak az azonos nevu konyvtari hivast."""
+    out = set()
+    for n in ast.walk(tree):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out.add(n.name)
+    return out
+
+
+def _origin(call, binds, local):
+    """A hivott dolog KOTES szerinti teljes neve. None = nem eldontheto. '<local>.' = sajat definicio."""
+    f = call.func
+    if isinstance(f, ast.Call) and isinstance(f.func, ast.Name) and f.func.id == "getattr" \
+            and len(f.args) == 2 and isinstance(f.args[1], ast.Constant) \
+            and isinstance(f.args[1].value, str):
+        base = _dotted(f.args[0])
+        return _resolve(base + "." + f.args[1].value, binds) if base else None
+    d = _dotted(f)
+    if d is None:
+        return None
+    head = d.split(".")[0]
+    if head in local and head not in binds:
+        return "<local>." + d
+    return _resolve(d, binds)
+
+
+def _const_strs(tree):
+    """modul-szintu `NEV = "literal"` / `NEV = b"literal"` konstansok (konstans-propagacio)."""
+    out = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant) \
+                and isinstance(n.value.value, (str, bytes)):
+            for t in n.targets:
+                if isinstance(t, ast.Name):
+                    out[t.id] = n.value.value
+    return out
 
 
 def decide(code, line):
@@ -32,10 +98,12 @@ def decide(code, line):
         tree = ast.parse(code)
     except SyntaxError:
         return "SAFE"
+    binds, local = _bindings(tree), _local_defs(tree)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or getattr(node, "lineno", None) != line:
             continue
-        if not _is_jwt_encode(node):
+        origin = _origin(node, binds, local)
+        if not origin or origin.startswith("<local>.") or origin not in _ENCODE:
             continue
         payload = node.args[0] if node.args else None
         if payload is None:
